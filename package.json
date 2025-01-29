@@ -1,0 +1,22 @@
+{
+  "name": "ussd-router",
+  "version": "1.0.0",
+  "description": "Javascript Ussd Router",
+  "main": "index.js",
+  "scripts": {
+    "dev": "tsx src/index.ts"
+  },
+  "keywords": [
+    "ussd",
+    "ussd-router",
+    "ussd-json-router"
+  ],
+  "author": "Japheth Kiptoo",
+  "license": "ISC",
+  "dependencies": {
+    "tsx": "^4.19.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
