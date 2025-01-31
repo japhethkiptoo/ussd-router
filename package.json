@@ -4,7 +4,7 @@
   "description": "Javascript Ussd Router",
   "main": "index.js",
   "scripts": {
-    "dev": "tsx src/index.ts"
+    "dev": "tsx tests/index.ts"
   },
   "keywords": [
     "ussd",

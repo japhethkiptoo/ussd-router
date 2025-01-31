@@ -10,7 +10,9 @@ export type MenuRunAction<T> = () => void | Promise<T> | T;
 
 export type MenuOptions<T> = {
   run: MenuRunAction<T>;
-  next: MenuNext[];
+  next?: MenuNext[];
+  retriable?: boolean;
+  retry_message?: string;
 };
 
 export type RunArgs = {
@@ -19,4 +21,9 @@ export type RunArgs = {
   sessionID: string;
   serviceCode: string;
   phoneNumber: string;
+};
+
+export type CoreMenuResponse = {
+  message: string;
+  end: boolean;
 };
