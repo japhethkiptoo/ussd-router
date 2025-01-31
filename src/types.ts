@@ -1,5 +1,5 @@
-type MenuNextAction = () => string | Promise<string>;
-type MenuNextPattern = string | number | RegExp;
+export type MenuNextAction = () => string | Promise<string>;
+export type MenuNextPattern = string | number | RegExp;
 
 export type MenuNext = {
   pattern: MenuNextPattern;
