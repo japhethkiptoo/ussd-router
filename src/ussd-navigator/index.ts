@@ -4,10 +4,12 @@ import {
   MenuNextPattern,
   MenuOptions,
   RunArgs,
+  UssdNavigatorOptions,
 } from "@src/types";
 import UssdMenu from "./menu";
+import SessionManager from "@src/session-manager";
 
-class UssdNavigator<T> {
+class UssdNavigator<T> extends SessionManager {
   private menus: Map<string, UssdMenu<T>>;
   public start_menu = "__start__";
   public sorry_menu = "__sorry__";
@@ -19,11 +21,16 @@ class UssdNavigator<T> {
 
   public defaultRetryMessage: string;
 
-  constructor(options?: any) {
+  private logger?: (payload: any) => void;
+
+  constructor(options?: UssdNavigatorOptions) {
+    super();
     this.menus = new Map();
 
     this.defaultRetryMessage =
       options?.retry_message || "Invalid input. Please try again.";
+
+    this.logger = options?.log;
   }
 
   addMenu(name: string, options: MenuOptions<T>) {
@@ -51,7 +58,6 @@ class UssdNavigator<T> {
   }
 
   matchPattern(pattern: MenuNextPattern, input: string): boolean {
-    console.log("Pattern:", pattern, "Input:", input);
     if (typeof pattern === "string" || typeof pattern === "number") {
       return input === pattern;
     } else if (pattern instanceof RegExp) {
@@ -102,7 +108,7 @@ class UssdNavigator<T> {
       };
 
       init();
-      console.log(path);
+
       for (const p of path) {
         const currentstate = this.menus.get(current_state);
         this.input = p;
@@ -112,30 +118,21 @@ class UssdNavigator<T> {
           return;
         }
 
-        console.log(p);
-        console.log(currentstate.next);
-
         const nextState = currentstate.next?.find((n) =>
           this.matchPattern(n.pattern, p)
         );
 
-        console.log("nextState", nextState);
-
         if (nextState) {
           current_state = await this.resolveAction(nextState.action);
           is_retry = false;
-          console.log("current_state:MM", current_state);
         }
 
         if (!nextState) {
           const { state } = await this.handleRetry(current_state);
-          console.log("state", state);
           current_state = state;
           is_retry = true;
         }
       }
-
-      console.log("Final: state", current_state);
 
       resolve({ state: current_state, is_retry });
     });
@@ -149,13 +146,35 @@ class UssdNavigator<T> {
       const state = this.menus.get(nextState);
 
       if (!state) {
+        this.log({
+          menu: nextState,
+          menu_category: null,
+          input: this.input,
+          sessionID: this.sessionID,
+          serviceCode: this.serviceCode,
+          phoneNumber: this.phoneNumber,
+          message: "sorry",
+          end: false,
+        });
         error(new Error("No state found"));
         return;
       }
 
       if (is_retry) {
+        const message = state?.retry_message || this.defaultRetryMessage;
+
+        this.log({
+          menu: nextState,
+          menu_category: state.category,
+          input: this.input,
+          sessionID: this.sessionID,
+          serviceCode: this.serviceCode,
+          phoneNumber: this.phoneNumber,
+          message,
+          end: false,
+        });
         success({
-          message: state?.retry_message || this.defaultRetryMessage,
+          message,
           end: false,
         });
         return;
@@ -163,9 +182,39 @@ class UssdNavigator<T> {
 
       const result = (await Promise.resolve(state.run())) as CoreMenuResponse &
         T;
+
+      this.log({
+        menu: nextState,
+        menu_category: state.category,
+        input: this.input,
+        sessionID: this.sessionID,
+        serviceCode: this.serviceCode,
+        phoneNumber: this.phoneNumber,
+        message: result.message,
+        end: result.end,
+      });
+
       success({ ...result });
       return;
     });
+  }
+
+  log(payload: any) {
+    if (this.logger) {
+      this.logger({ ...payload });
+    }
+  }
+
+  async getSession(): Promise<any> {
+    return this.get(this.sessionID);
+  }
+
+  async setSession(data: any): Promise<void> {
+    return this.update(this.sessionID, data);
+  }
+
+  async dropSession(): Promise<void> {
+    return this.drop(this.sessionID);
   }
 }
 
