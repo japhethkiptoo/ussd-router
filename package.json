@@ -1,10 +1,12 @@
 {
-  "name": "ussd-router",
+  "name": "ussd-navigator",
   "version": "1.0.0",
   "description": "Javascript Ussd Router",
-  "main": "index.js",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "scripts": {
-    "dev": "tsx tests/index.ts"
+    "dev": "tsx tests/index.ts",
+    "build": "tsc"
   },
   "keywords": [
     "ussd",
@@ -18,5 +20,9 @@
   },
   "devDependencies": {
     "typescript": "^5.7.3"
-  }
+  },
+  "files": [
+    "package.json",
+    "lib"
+  ]
 }

@@ -1,4 +1,4 @@
-import { SessionStorage } from "@src/types";
+import { SessionStorage } from "../types";
 
 export class MapStorage implements SessionStorage {
   private store = new Map<string, string>();

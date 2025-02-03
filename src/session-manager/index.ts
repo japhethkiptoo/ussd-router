@@ -1,4 +1,4 @@
-import { SessionStorage } from "@src/types";
+import { SessionStorage } from "../types";
 import { MapStorage } from "./map.storage";
 
 class SessionManager {

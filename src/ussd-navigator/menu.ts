@@ -1,4 +1,4 @@
-import { MenuNext, MenuOptions, MenuRunAction } from "@src/types";
+import { MenuNext, MenuOptions, MenuRunAction } from "../types";
 
 class UssdMenu<T> {
   run: MenuRunAction<T>;
@@ -9,7 +9,7 @@ class UssdMenu<T> {
 
   constructor(options: MenuOptions<T>) {
     this.run = options.run;
-    this.next = options.next;
+    this.next = options.next!;
     this.retriable = options.retriable ?? true;
     this.retry_message = options.retry_message || null;
     this.category = options.category || "default";

@@ -5,19 +5,19 @@ import {
   MenuOptions,
   RunArgs,
   UssdNavigatorOptions,
-} from "@src/types";
+} from "../types";
 import UssdMenu from "./menu";
-import SessionManager from "@src/session-manager";
+import SessionManager from "../session-manager";
 
 class UssdNavigator<T> extends SessionManager {
   private menus: Map<string, UssdMenu<T>>;
   public start_menu = "__start__";
   public sorry_menu = "__sorry__";
 
-  public input: string;
-  public sessionID: string;
-  public serviceCode: string;
-  public phoneNumber: string;
+  public input!: string;
+  public sessionID!: string;
+  public serviceCode!: string;
+  public phoneNumber!: string;
 
   public defaultRetryMessage: string;
 
@@ -111,7 +111,7 @@ class UssdNavigator<T> extends SessionManager {
 
       for (const p of path) {
         const currentstate = this.menus.get(current_state);
-        this.input = p;
+        this.input = p!;
 
         if (!currentstate) {
           reject(new Error("No state found"));
@@ -119,7 +119,7 @@ class UssdNavigator<T> extends SessionManager {
         }
 
         const nextState = currentstate.next?.find((n) =>
-          this.matchPattern(n.pattern, p)
+          this.matchPattern(n.pattern, p!)
         );
 
         if (nextState) {
@@ -219,5 +219,4 @@ class UssdNavigator<T> extends SessionManager {
 }
 
 export default UssdNavigator;
-
 export type { UssdNavigator };
