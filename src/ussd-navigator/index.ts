@@ -13,6 +13,7 @@ class UssdNavigator<T> extends SessionManager {
   private menus: Map<string, UssdMenu<T>>;
   public start_menu = "__start__";
   public sorry_menu = "__sorry__";
+  public end_menu = "__end__";
 
   public input!: string;
   public sessionID!: string;
@@ -21,14 +22,20 @@ class UssdNavigator<T> extends SessionManager {
 
   public defaultRetryMessage: string;
 
+  private defaultMaxRetries: number = 3;
+
+  private readonly sessionRetries: Map<string, number>;
+
   private logger?: (payload: any) => void;
 
   constructor(options?: UssdNavigatorOptions) {
     super();
     this.menus = new Map();
+    this.sessionRetries = new Map();
 
     this.defaultRetryMessage =
       options?.retry_message || "Invalid input. Please try again.";
+    this.defaultMaxRetries = options?.max_retries || 3;
 
     this.logger = options?.log;
   }
@@ -38,6 +45,7 @@ class UssdNavigator<T> extends SessionManager {
       throw new Error(`Menu ${name} already exists`);
     }
     const menu = new UssdMenu({
+      name,
       ...options,
     });
     this.menus.set(name, menu);
@@ -127,10 +135,16 @@ class UssdNavigator<T> extends SessionManager {
           is_retry = false;
         }
 
-        if (!nextState) {
+        if (
+          !nextState &&
+          this.isRetryLimitExceeded(this.sessionID, currentstate.name)
+        ) {
           const { state } = await this.handleRetry(current_state);
           current_state = state;
           is_retry = true;
+        } else {
+          current_state = this.sorry_menu;
+          is_retry = false;
         }
       }
 
@@ -138,7 +152,7 @@ class UssdNavigator<T> extends SessionManager {
     });
   }
 
-  run(args: RunArgs): Promise<{ message: string; end: boolean }> {
+  run(args: RunArgs): Promise<CoreMenuResponse> {
     return new Promise(async (success, error) => {
       const route = this.getRoute(args);
       const { state: nextState, is_retry } = await this.resolveRoute(route);
@@ -164,7 +178,7 @@ class UssdNavigator<T> extends SessionManager {
         const message = state?.retry_message || this.defaultRetryMessage;
 
         this.log({
-          menu: nextState,
+          menu: state.name,
           menu_category: state.category,
           input: this.input,
           sessionID: this.sessionID,
@@ -173,10 +187,14 @@ class UssdNavigator<T> extends SessionManager {
           message,
           end: false,
         });
+
+        this.incrementRetryCount(this.sessionID, state.name);
+
         success({
           message,
           end: false,
         });
+
         return;
       }
 
@@ -184,7 +202,7 @@ class UssdNavigator<T> extends SessionManager {
         T;
 
       this.log({
-        menu: nextState,
+        menu: state.name,
         menu_category: state.category,
         input: this.input,
         sessionID: this.sessionID,
@@ -215,6 +233,35 @@ class UssdNavigator<T> extends SessionManager {
 
   async dropSession(): Promise<void> {
     return this.drop(this.sessionID);
+  }
+
+  //sessionRetries tracking
+  private getRetryKey(sessionId: string, menuName: string): string {
+    return `${sessionId}:${menuName}`;
+  }
+
+  private resetRetryCount(sessionId: string, menuName: string): void {
+    const key = this.getRetryKey(sessionId, menuName);
+    this.sessionRetries.set(key, 0);
+  }
+
+  private incrementRetryCount(sessionId: string, menuName: string): number {
+    const key = this.getRetryKey(sessionId, menuName);
+    const current = this.sessionRetries.get(key) || 0;
+    const newCount = current + 1;
+    this.sessionRetries.set(key, newCount);
+    return newCount;
+  }
+
+  private isRetryLimitExceeded(sessionId: string, menuName: string): boolean {
+    const menu = this.menus.get(menuName);
+    if (!menu) return true;
+
+    const maxRetries = menu.max_retries! || this.defaultMaxRetries;
+    const key = this.getRetryKey(sessionId, menuName);
+    const count = this.sessionRetries.get(key) || 0;
+
+    return count >= maxRetries;
   }
 }
 

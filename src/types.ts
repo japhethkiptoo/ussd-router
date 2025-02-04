@@ -13,6 +13,7 @@ export type MenuOptions<T> = {
   next?: MenuNext[];
   retriable?: boolean;
   retry_message?: string;
+  max_retries?: number;
   category?: string;
 };
 
@@ -31,6 +32,7 @@ export type CoreMenuResponse = {
 
 export type UssdNavigatorOptions = {
   retry_message?: string;
+  max_retries?: number;
   log: (payload: LoggerPayload) => void;
 };
 
@@ -38,7 +40,6 @@ export type LoggerPayload = {
   menu: string;
   input: string;
 };
-
 
 export interface SessionStorage {
   get(key: string): Promise<any | null>;
