@@ -117,6 +117,8 @@ class UssdNavigator<T> extends SessionManager {
 
       init();
 
+      console.log(path);
+
       for (const p of path) {
         const currentstate = this.menus.get(current_state);
         this.input = p!;
@@ -132,6 +134,7 @@ class UssdNavigator<T> extends SessionManager {
 
         if (nextState) {
           current_state = await this.resolveAction(nextState.action);
+          console.log(current_state);
           is_retry = false;
         }
 
@@ -142,11 +145,18 @@ class UssdNavigator<T> extends SessionManager {
           const { state } = await this.handleRetry(current_state);
           current_state = state;
           is_retry = true;
-        } else {
+        }
+
+        if (
+          !nextState &&
+          !this.isRetryLimitExceeded(this.sessionID, currentstate.name)
+        ) {
           current_state = this.sorry_menu;
           is_retry = false;
         }
       }
+
+      console.log(current_state);
 
       resolve({ state: current_state, is_retry });
     });
