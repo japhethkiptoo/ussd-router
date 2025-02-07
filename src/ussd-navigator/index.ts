@@ -164,6 +164,10 @@ class UssdNavigator<T> extends SessionManager {
 
   run(args: RunArgs): Promise<CoreMenuResponse> {
     return new Promise(async (success, error) => {
+      this.phoneNumber = args.phoneNumber;
+      this.sessionID = args.sessionID;
+      this.serviceCode = args.serviceCode;
+
       const route = this.getRoute(args);
       const { state: nextState, is_retry } = await this.resolveRoute(route);
 
