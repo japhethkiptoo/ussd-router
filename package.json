@@ -15,11 +15,9 @@
   ],
   "author": "Japheth Kiptoo",
   "license": "ISC",
-  "dependencies": {
-    "tsx": "^4.19.2"
-  },
   "devDependencies": {
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+     "tsx": "^4.19.2"
   },
   "files": [
     "package.json",
