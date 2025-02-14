@@ -76,14 +76,20 @@ class UssdNavigator<T> extends SessionManager {
 
   private resolveAction(action: string | MenuNextAction): Promise<string> {
     return new Promise(async (resolve, reject) => {
-      if (typeof action === "string") {
-        return resolve(action);
-      } else if (typeof action === "function") {
-        const result = action();
-        return resolve(result instanceof Promise ? await result : result);
-      }
+      try {
+        if (typeof action === "string") {
+          return resolve(action);
+        } else if (typeof action === "function") {
+          const result = action();
+          return resolve(result instanceof Promise ? await result : result);
+        }
 
-      reject(new Error("Invalid action"));
+        reject(new Error("Invalid action"));
+        return
+      }catch(e) {
+        reject(e)
+        return
+      }
     });
   }
 
@@ -97,6 +103,7 @@ class UssdNavigator<T> extends SessionManager {
     path: Partial<RunArgs["path"]>
   ): Promise<{ state: string; is_retry: boolean }> {
     return new Promise(async (resolve, reject) => {
+      try {
       let current_state = this.start_menu;
       let is_retry = false;
 
@@ -154,6 +161,11 @@ class UssdNavigator<T> extends SessionManager {
       }
 
       resolve({ state: current_state, is_retry });
+      return
+      } catch(e) {
+        reject(e);
+        return
+      }
     });
   }
 
@@ -225,7 +237,8 @@ class UssdNavigator<T> extends SessionManager {
       success({ ...result });
       return;
       } catch(e) {
-      error(e)
+        error(e)
+        return
       }
     });
   }
