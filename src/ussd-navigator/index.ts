@@ -159,6 +159,7 @@ class UssdNavigator<T> extends SessionManager {
 
   run(args: RunArgs): Promise<CoreMenuResponse> {
     return new Promise(async (success, error) => {
+      try {
       this.phoneNumber = args.phoneNumber;
       this.sessionID = args.sessionID;
       this.serviceCode = args.serviceCode;
@@ -223,6 +224,9 @@ class UssdNavigator<T> extends SessionManager {
 
       success({ ...result });
       return;
+      } catch(e) {
+      error(e)
+      }
     });
   }
 
