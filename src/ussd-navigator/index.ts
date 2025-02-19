@@ -1,13 +1,21 @@
 import {
   CoreMenuResponse,
+  LoggerPayload,
   MenuNextAction,
   MenuNextPattern,
   MenuOptions,
-  RunArgs,
-  UssdNavigatorOptions,
+  RunArgs
 } from "../types";
 import UssdMenu from "./menu";
 import SessionManager from "../session-manager";
+import { RedisOptions } from "@/session-manager/redis.storage";
+
+type UssdNavigatorOptions = {
+  retry_message?: string;
+  max_retries?: number;
+  log: (payload: LoggerPayload) => void;
+  redis_config?: RedisOptions
+};
 
 class UssdNavigator<T> extends SessionManager {
   private menus: Map<string, UssdMenu<T>>;
@@ -29,15 +37,15 @@ class UssdNavigator<T> extends SessionManager {
   private logger?: (payload: any) => void;
 
   constructor(options?: UssdNavigatorOptions) {
-    super();
+    const { max_retries, log, retry_message, ...session_options} = options || {};
+    super({...session_options});
     this.menus = new Map();
     this.sessionRetries = new Map();
 
-    this.defaultRetryMessage =
-      options?.retry_message || "Invalid input. Please try again.";
-    this.defaultMaxRetries = options?.max_retries || 3;
+    this.defaultRetryMessage = retry_message || "Invalid input. Please try again.";
+    this.defaultMaxRetries = max_retries || 3;
 
-    this.logger = options?.log;
+    this.logger = log;
   }
 
   addMenu(name: string, options: MenuOptions<T>) {

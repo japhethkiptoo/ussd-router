@@ -30,11 +30,7 @@ export type CoreMenuResponse = {
   end: boolean;
 };
 
-export type UssdNavigatorOptions = {
-  retry_message?: string;
-  max_retries?: number;
-  log: (payload: LoggerPayload) => void;
-};
+
 
 export type LoggerPayload = {
   menu: string;
