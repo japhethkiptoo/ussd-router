@@ -4,7 +4,7 @@ import {
   MenuNextAction,
   MenuNextPattern,
   MenuOptions,
-  RunArgs
+  RunArgs,
 } from "../types";
 import UssdMenu from "./menu";
 import SessionManager from "../session-manager";
@@ -14,7 +14,7 @@ type UssdNavigatorOptions = {
   retry_message?: string;
   max_retries?: number;
   log: (payload: LoggerPayload) => void;
-  redis_config?: RedisOptions
+  redis_config?: RedisOptions;
 };
 
 class UssdNavigator<T> extends SessionManager {
@@ -37,12 +37,14 @@ class UssdNavigator<T> extends SessionManager {
   private logger?: (payload: any) => void;
 
   constructor(options?: UssdNavigatorOptions) {
-    const { max_retries, log, retry_message, ...session_options} = options || {};
-    super({...session_options});
+    const { max_retries, log, retry_message, ...session_options } =
+      options || {};
+    super({ ...session_options });
     this.menus = new Map();
     this.sessionRetries = new Map();
 
-    this.defaultRetryMessage = retry_message || "Invalid input. Please try again.";
+    this.defaultRetryMessage =
+      retry_message || "Invalid input. Please try again.";
     this.defaultMaxRetries = max_retries || 3;
 
     this.logger = log;
@@ -93,10 +95,10 @@ class UssdNavigator<T> extends SessionManager {
         }
 
         reject(new Error("Invalid action"));
-        return
-      }catch(e) {
-        reject(e)
-        return
+        return;
+      } catch (e) {
+        reject(e);
+        return;
       }
     });
   }
@@ -108,71 +110,71 @@ class UssdNavigator<T> extends SessionManager {
   }
 
   private resolveRoute(
-    path: Partial<RunArgs["path"]>
+    path: Partial<RunArgs["path"]>,
   ): Promise<{ state: string; is_retry: boolean }> {
     return new Promise(async (resolve, reject) => {
       try {
-      let current_state = this.start_menu;
-      let is_retry = false;
+        let current_state = this.start_menu;
+        let is_retry = false;
 
-      const init = () => {
-        const startState = this.menus.get(this.start_menu);
+        const init = () => {
+          const startState = this.menus.get(this.start_menu);
 
-        if (!startState) {
-          reject(new Error("Please add a start menu"));
-          return;
+          if (!startState) {
+            reject(new Error("Please add a start menu"));
+            return;
+          }
+
+          const startStateNext = startState.next ?? [];
+          const hasEmptyPattern = startStateNext.some((n) => n.pattern === "");
+          if (hasEmptyPattern) {
+            path.unshift("");
+          }
+        };
+
+        init();
+
+        for (const p of path) {
+          const currentstate = this.menus.get(current_state);
+          this.input = p!;
+
+          if (!currentstate) {
+            reject(new Error("No state found"));
+            return;
+          }
+
+          const nextState = currentstate.next?.find((n) =>
+            this.matchPattern(n.pattern, p!),
+          );
+
+          if (nextState) {
+            current_state = await this.resolveAction(nextState.action);
+            is_retry = false;
+          }
+
+          if (
+            !nextState &&
+            !this.isRetryLimitExceeded(this.sessionID, currentstate.name)
+          ) {
+            const { state } = await this.handleRetry(current_state);
+            current_state = state;
+            is_retry = true;
+          }
+
+          if (
+            !nextState &&
+            this.isRetryLimitExceeded(this.sessionID, currentstate.name)
+          ) {
+            current_state = this.sorry_menu;
+            is_retry = false;
+          }
         }
 
-        const startStateNext = startState.next ?? [];
-        const hasEmptyPattern = startStateNext.some((n) => n.pattern === "");
-        if (hasEmptyPattern) {
-          path.unshift("");
-        }
-      };
-
-      init();
-
-      for (const p of path) {
-        const currentstate = this.menus.get(current_state);
-        this.input = p!;
-
-        if (!currentstate) {
-          reject(new Error("No state found"));
-          return;
-        }
-
-        const nextState = currentstate.next?.find((n) =>
-          this.matchPattern(n.pattern, p!)
-        );
-
-        if (nextState) {
-          current_state = await this.resolveAction(nextState.action);
-          is_retry = false;
-        }
-
-        if (
-          !nextState &&
-          this.isRetryLimitExceeded(this.sessionID, currentstate.name)
-        ) {
-          const { state } = await this.handleRetry(current_state);
-          current_state = state;
-          is_retry = true;
-        }
-
-        if (
-          !nextState &&
-          !this.isRetryLimitExceeded(this.sessionID, currentstate.name)
-        ) {
-          current_state = this.sorry_menu;
-          is_retry = false;
-        }
-      }
-
-      resolve({ state: current_state, is_retry });
-      return
-      } catch(e) {
+        resolve({ state: current_state, is_retry });
+        return;
+      } catch (e) {
         reject(e);
-        return
+        return;
       }
     });
   }
@@ -180,32 +182,59 @@ class UssdNavigator<T> extends SessionManager {
   run(args: RunArgs): Promise<CoreMenuResponse> {
     return new Promise(async (success, error) => {
       try {
-      this.phoneNumber = args.phoneNumber;
-      this.sessionID = args.sessionID;
-      this.serviceCode = args.serviceCode;
+        this.phoneNumber = args.phoneNumber;
+        this.sessionID = args.sessionID;
+        this.serviceCode = args.serviceCode;
 
-      const route = this.getRoute(args);
-      const { state: nextState, is_retry } = await this.resolveRoute(route);
+        const route = this.getRoute(args);
+        const { state: nextState, is_retry } = await this.resolveRoute(route);
 
-      const state = this.menus.get(nextState);
+        const state = this.menus.get(nextState);
 
-      if (!state) {
-        this.log({
-          menu: nextState,
-          menu_category: null,
-          input: this.input,
-          sessionID: this.sessionID,
-          serviceCode: this.serviceCode,
-          phoneNumber: this.phoneNumber,
-          message: "sorry",
-          end: false,
-        });
-        error(new Error("No state found"));
-        return;
-      }
+        console.log("Retry state:", state);
 
-      if (is_retry) {
-        const message = state?.retry_message || this.defaultRetryMessage;
+        if (!state) {
+          this.log({
+            menu: nextState,
+            menu_category: null,
+            input: this.input,
+            sessionID: this.sessionID,
+            serviceCode: this.serviceCode,
+            phoneNumber: this.phoneNumber,
+            message: "sorry",
+            end: false,
+          });
+          error(new Error("No state found"));
+          return;
+        }
+
+        if (is_retry) {
+          const message = state?.retry_message || this.defaultRetryMessage;
+
+          this.log({
+            menu: state.name,
+            menu_category: state.category,
+            input: this.input,
+            sessionID: this.sessionID,
+            serviceCode: this.serviceCode,
+            phoneNumber: this.phoneNumber,
+            message,
+            end: false,
+          });
+
+          this.incrementRetryCount(this.sessionID, state.name);
+
+          success({
+            message,
+            end: false,
+          });
+
+          return;
+        }
+
+        const result = (await Promise.resolve(
+          state.run(),
+        )) as CoreMenuResponse & T;
 
         this.log({
           menu: state.name,
@@ -214,39 +243,15 @@ class UssdNavigator<T> extends SessionManager {
           sessionID: this.sessionID,
           serviceCode: this.serviceCode,
           phoneNumber: this.phoneNumber,
-          message,
-          end: false,
+          message: result.message,
+          end: result.end,
         });
 
-        this.incrementRetryCount(this.sessionID, state.name);
-
-        success({
-          message,
-          end: false,
-        });
-
+        success({ ...result });
         return;
-      }
-
-      const result = (await Promise.resolve(state.run())) as CoreMenuResponse &
-        T;
-
-      this.log({
-        menu: state.name,
-        menu_category: state.category,
-        input: this.input,
-        sessionID: this.sessionID,
-        serviceCode: this.serviceCode,
-        phoneNumber: this.phoneNumber,
-        message: result.message,
-        end: result.end,
-      });
-
-      success({ ...result });
-      return;
-      } catch(e) {
-        error(e)
-        return
+      } catch (e) {
+        error(e);
+        return;
       }
     });
   }
@@ -289,13 +294,13 @@ class UssdNavigator<T> extends SessionManager {
 
   private isRetryLimitExceeded(sessionId: string, menuName: string): boolean {
     const menu = this.menus.get(menuName);
-    if (!menu) return true;
+    if (!menu) return false;
 
     const maxRetries = menu.max_retries! || this.defaultMaxRetries;
     const key = this.getRetryKey(sessionId, menuName);
     const count = this.sessionRetries.get(key) || 0;
 
-    return count >= maxRetries;
+    return count > maxRetries ? true : false;
   }
 }
 

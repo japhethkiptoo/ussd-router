@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx --watch tests/index.ts",
     "build": "tsc",
-    "test": "jest"
+    "test": "jest --verbose"
   },
   "keywords": [
     "ussd",
