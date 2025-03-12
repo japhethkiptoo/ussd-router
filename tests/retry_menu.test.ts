@@ -41,29 +41,29 @@ describe("Menu Re-try Functionality", () => {
     });
   });
 
-  // test("Menu Client Response", async () => {
-  //   await expect(
-  //     router.run({
-  //       sessionID: "345437",
-  //       serviceCode: "*222#",
-  //       phoneNumber: "254724765149",
-  //       input: "",
-  //       path: [],
-  //     }),
-  //   ).resolves.toEqual({ message: "Hello", end: false });
-  // })
+  test("Menu Client Response", async () => {
+    await expect(
+      router.run({
+        sessionID: "345437",
+        serviceCode: "*222#",
+        phoneNumber: "254724765149",
+        input: "",
+        path: [],
+      }),
+    ).resolves.toEqual({ message: "Hello", end: false });
+  });
 
-  // test("Amount Enter Menu", async () => {
-  //   await expect(
-  //     router.run({
-  //       sessionID: "345437",
-  //       serviceCode: "*222#",
-  //       phoneNumber: "254724765149",
-  //       input: "1",
-  //       path: ["1"],
-  //     }),
-  //   ).resolves.toEqual({ message: "Enter Amount(min 100)", end: false });
-  // });
+  test("Amount Enter Menu", async () => {
+    await expect(
+      router.run({
+        sessionID: "345437",
+        serviceCode: "*222#",
+        phoneNumber: "254724765149",
+        input: "1",
+        path: ["1"],
+      }),
+    ).resolves.toEqual({ message: "Enter Amount(min 100)", end: false });
+  });
 
   test("Retry Input", async () => {
     await expect(
@@ -72,8 +72,8 @@ describe("Menu Re-try Functionality", () => {
         serviceCode: "*222#",
         phoneNumber: "254724765149",
         input: "1",
-        path: ["1", "100"],
+        path: ["1", "200"],
       }),
-    ).resolves.toEqual({ message: "Enter Amount(min 100)", end: false });
+    ).resolves.toEqual({ message: "Success", end: true });
   });
 });
