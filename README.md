@@ -1,8 +1,6 @@
 # ussd-router
 
-
 The USSD Router is a JavaScript-based service for handling USSD (Unstructured Supplementary Service Data) requests. USSD is a protocol used for communicating with mobile devices, typically for services such as mobile banking, mobile money, and other interactive services.
-
 
 Key Features:
 
@@ -11,19 +9,68 @@ Session Management: The service has a session management system, which allows it
 Logger: The service has a logger component, which logs user interactions and other events.
 Error Handling: The service has error handling mechanisms in place, which handle errors and exceptions that may occur during user interactions.
 
-
 # Installation
 
-<p>link</p>
+```bash
+# Basic installation without Redis
+npm install ussd-navigator
 
+# Installation with Redis support
+npm install ussd-navigator redis
+```
 
-// Initialize the UssdNavigator
-const navigator = new UssdNavigator({
-  retry_message: "Invalid input. Please try again.",
-  log: (payload) => {
-  //log to a persistant database
-    console.log(payload);
+# Usage
+
+```typescript
+import UssdNavigator from "ussd-navigator";
+
+type UssdResponse = {
+  message: string;
+  end: boolean;
+};
+
+const router = new UssdNavigator<UssdResponse>();
+
+//start menu - important!
+router.startMenu({
+  run: () => {
+    return {
+      message: "Hello, welcome to our service! 1) Sign up 2) Login 3) Logout",
+      end: false,
+    };
   },
+  next: [
+    { pattern: "1", action: "sign_up" },
+    { pattern: "2", action: () => "login" },
+    { pattern: "3", action: async () => {
+      return Promise.resolve("logout");
+    } },
+  ],
 });
 
-This code snippet initializes a new instance of the UssdNavigator class, passing in an options object with a custom retry message and a logging function that logs the payload to the console.
+//signup menu
+router.addMenu("signup", {
+  run: () => {
+    return {
+      message: "Welcome to our signup page!",
+      end: false,
+    };
+  },
+  next: [
+    { pattern: "1", action: ...},
+    { pattern: "2", action: ...},
+  ],
+});
+
+//login menu
+router.addMenu("login", {
+  run: () => {
+    return {
+      message: "Welcome to our login page!",
+      end: true,
+    };
+  },
+
+});
+
+```

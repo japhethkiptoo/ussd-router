@@ -22,6 +22,29 @@ describe("Force Retry", () => {
         {
           pattern: /^\d{4}$/,
           action: () => {
+            if (router.input !== "4321") {
+              return "invalid_pin";
+            }
+            return "dashbaord";
+          },
+        },
+      ],
+    });
+
+    router.addMenu("invalid_pin", {
+      run: () => {
+        return {
+          message: "Wrong PIN, please try again?",
+          end: false,
+        };
+      },
+      next: [
+        {
+          pattern: /^\d{4}$/,
+          action: () => {
+            if (router.input !== "4321") {
+              return "invalid_pin";
+            }
             return "dashbaord";
           },
         },
@@ -44,8 +67,8 @@ describe("Force Retry", () => {
         serviceCode: "*222#",
         phoneNumber: "254724765149",
         input: "",
-        path: ["123"],
+        path: ["1234"],
       }),
-    ).resolves.toEqual({ message: "Sorry", end: true });
+    ).resolves.toEqual({ message: "Dashboard", end: true });
   });
 });

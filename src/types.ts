@@ -30,8 +30,6 @@ export type CoreMenuResponse = {
   end: boolean;
 };
 
-
-
 export type LoggerPayload = {
   menu: string;
   input: string;
@@ -42,3 +40,10 @@ export interface SessionStorage {
   set(key: string, value: any): Promise<void>;
   delete(key: string): Promise<void>;
 }
+
+export type RedisOptions = {
+  host: string;
+  port: string;
+  username: string;
+  password: string;
+};

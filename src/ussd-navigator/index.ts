@@ -4,16 +4,15 @@ import {
   MenuNextAction,
   MenuNextPattern,
   MenuOptions,
+  RedisOptions,
   RunArgs,
 } from "../types";
 import UssdMenu from "./menu";
 import SessionManager from "../session-manager";
-import { RedisOptions } from "@/session-manager/redis.storage";
-
 type UssdNavigatorOptions = {
   retry_message?: string;
   max_retries?: number;
-  log: (payload: LoggerPayload) => void;
+  log?: (payload: LoggerPayload) => void;
   redis_config?: RedisOptions;
 };
 
