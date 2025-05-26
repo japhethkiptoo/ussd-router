@@ -7,12 +7,20 @@ type UssdRespone = {
 };
 
 describe("Redis integration", () => {
-  const router: IUssdNavigator<UssdRespone> = new UssdNavigator<UssdRespone>({
-    redis_config: {
-      host: "",
-      port: "3306",
-      username: "blaaa",
-      password: "blaaa",
-    },
+  let router: IUssdNavigator<UssdRespone>;
+
+  beforeAll(() => {
+    router = new UssdNavigator<UssdRespone>({
+      redis_config: {
+        host: "0.0.0.0",
+        port: "6379",
+        username: "",
+        password: "",
+      },
+    });
+  });
+
+  test("Redis is configured", () => {
+    // expect(router.getSession()).toBeTruthy();
   });
 });

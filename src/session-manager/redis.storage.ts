@@ -7,11 +7,36 @@ export class RedisStorage implements SessionStorage {
   constructor(options: RedisOptions) {
     //[[username][:password]@][host][:port][/db-number]
     const { host, username, password, port } = options;
-    const url = `${username}:${password}@${host}:${port}`;
+    const url = this.createConnectionUrl({ host, port, username, password });
 
-    this.client = createClient({
-      url,
-    });
+    this.client = createClient({ url });
+  }
+
+  createConnectionUrl({
+    useSsl,
+    username,
+    password,
+    host,
+    port,
+    dbNumber = 0,
+  }: {
+    useSsl?: boolean;
+    username?: string;
+    password?: string;
+    host: string;
+    port: string | number;
+    dbNumber?: number;
+  }) {
+    const scheme = useSsl ? "rediss" : "redis";
+
+    let authPart = "";
+    if (username && password) {
+      authPart = `${username}:${password}@`;
+    } else if (password) {
+      authPart = `:${password}@`;
+    }
+
+    return `${scheme}://${authPart}${host}:${port}/${dbNumber}`;
   }
 
   async get(key: string): Promise<any | null> {
