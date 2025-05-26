@@ -16,7 +16,7 @@ class SessionManager {
           ...(options.redis_config && options.redis_config),
         });
       } catch (e) {
-        console.warn("Redis is not available");
+        console.warn("Redis is not available", e);
         throw new Error("Redis is not available");
       }
     } else {
