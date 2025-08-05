@@ -9,6 +9,7 @@ import {
 } from "../types";
 import UssdMenu from "./menu";
 import SessionManager from "../session-manager";
+import { BackNavigationManager } from "@/back-manager";
 type UssdNavigatorOptions = {
   retry_message?: string;
   max_retries?: number;
@@ -35,6 +36,8 @@ class UssdNavigator<T> extends SessionManager {
 
   private logger?: (payload: any) => void;
 
+  private backManager: BackNavigationManager<T>;
+
   constructor(options?: UssdNavigatorOptions) {
     const { max_retries, log, retry_message, ...session_options } =
       options || {};
@@ -47,9 +50,11 @@ class UssdNavigator<T> extends SessionManager {
     this.defaultMaxRetries = max_retries || 3;
 
     this.logger = log;
+
+    this.backManager = new BackNavigationManager(this);
   }
 
-  addMenu(name: string, options: MenuOptions<T>) {
+  addMenu(name: string, options: MenuOptions<T>, enableBack: boolean = true) {
     if (this.menus.has(name)) {
       throw new Error(`Menu ${name} already exists`);
     }
