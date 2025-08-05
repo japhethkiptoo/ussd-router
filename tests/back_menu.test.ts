@@ -7,7 +7,11 @@ type UssdRespone = {
 };
 
 describe("Menu Back Navigation", () => {
-  const router: IUssdNavigator<UssdRespone> = new UssdNavigator<UssdRespone>();
+  const router: IUssdNavigator<UssdRespone> = new UssdNavigator<UssdRespone>({
+    log: (l) => {
+      console.log(l);
+    },
+  });
 
   beforeEach(() => {
     router.startMenu({
@@ -33,8 +37,21 @@ describe("Menu Back Navigation", () => {
           end: false,
         };
       },
-      next: [{ pattern: "0", action: router.start_menu }],
+      next: [{ pattern: "100", action: "payment" }],
     });
+
+    router.addMenu(
+      "payment",
+      {
+        run: () => {
+          return {
+            message: "Nice, it was a success",
+            end: true,
+          };
+        },
+      },
+      false,
+    );
   });
 
   test("Back to start Menu", async () => {
@@ -44,7 +61,7 @@ describe("Menu Back Navigation", () => {
         serviceCode: "*222#",
         phoneNumber: "254724765149",
         input: "",
-        path: ["1", "0"],
+        path: ["1", "100", "0"],
       }),
     ).resolves.toEqual({
       message: "Hi, Welcome to OMIG Wealth \n 1) Invest \n 2) Withdraw Funds",

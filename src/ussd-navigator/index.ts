@@ -4,12 +4,13 @@ import {
   MenuNextAction,
   MenuNextPattern,
   MenuOptions,
+  MenuRunAction,
   RedisOptions,
   RunArgs,
 } from "../types";
 import UssdMenu from "./menu";
 import SessionManager from "../session-manager";
-import { BackNavigationManager } from "@/back-manager";
+import { BackNavigationManager } from "../back-manager";
 type UssdNavigatorOptions = {
   retry_message?: string;
   max_retries?: number;
@@ -37,6 +38,7 @@ class UssdNavigator<T> extends SessionManager {
   private logger?: (payload: any) => void;
 
   private backManager: BackNavigationManager<T>;
+  private back_pattern: string = "0";
 
   constructor(options?: UssdNavigatorOptions) {
     const { max_retries, log, retry_message, ...session_options } =
@@ -58,17 +60,58 @@ class UssdNavigator<T> extends SessionManager {
     if (this.menus.has(name)) {
       throw new Error(`Menu ${name} already exists`);
     }
+
+    const originalRun = options.run;
+    const originalNext = options.next || [];
+
+    const enhancedRun: MenuRunAction<T> = () => {
+      const historyPromise = this.backManager.pushToHistory(name);
+      const runResult = originalRun();
+
+      if (runResult instanceof Promise) {
+        return historyPromise.then(() => runResult);
+      }
+
+      if (runResult === undefined || runResult === null) {
+        historyPromise.catch(this.logger || console.error);
+        return runResult as T;
+      }
+      historyPromise.catch(this.logger || console.error);
+      return runResult;
+    };
+
+    const enhancedNext = enableBack
+      ? [
+          ...originalNext,
+          {
+            pattern: this.back_pattern,
+            action: async () => {
+              return await this.backManager.goBack();
+            },
+          },
+        ]
+      : originalNext;
+
+    const enhnacedOptions = {
+      ...options,
+      run: enhancedRun,
+      next: enhancedNext,
+    };
+
     const menu = new UssdMenu({
       name,
       ...options,
+      run: options.run,
+      next: enhancedNext,
     });
+
     this.menus.set(name, menu);
 
     return menu;
   }
 
   startMenu(options: MenuOptions<T>) {
-    return this.addMenu(this.start_menu, { ...options });
+    return this.addMenu(this.start_menu, { ...options }, false);
   }
 
   getRoute(args: RunArgs): Partial<RunArgs["path"]> {
@@ -307,6 +350,19 @@ class UssdNavigator<T> extends SessionManager {
     const count = this.sessionRetries.get(key) || 0;
 
     return count > maxRetries ? true : false;
+  }
+
+  async goBack(): Promise<string> {
+    return await this.backManager.goBack();
+  }
+
+  async clearNavigationHistory(): Promise<void> {
+    await this.backManager.clearHistory();
+  }
+
+  async getNavigationHistory(): Promise<string[]> {
+    const session = (await this.getSession()) || {};
+    return session.navigationHistory || [];
   }
 }
 
