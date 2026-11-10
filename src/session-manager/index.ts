@@ -1,26 +1,39 @@
 import { RedisOptions, SessionStorage } from "../types";
 import { MapStorage } from "./map.storage";
 
-type SessionManagerOptions = {
+export type SessionManagerOptions = {
   redis_config?: RedisOptions;
+  /** Custom session store. Takes precedence over `redis_config`. */
+  storage?: SessionStorage;
+  /** Session key expiry in seconds. */
+  session_ttl?: number;
 };
 
 class SessionManager {
   private storage: SessionStorage;
+  private readonly sessionTtl?: number;
 
   constructor(options?: SessionManagerOptions) {
-    if (options?.redis_config) {
+    this.sessionTtl = options?.session_ttl ?? options?.redis_config?.session_ttl;
+
+    if (options?.storage) {
+      this.storage = options.storage;
+    } else if (options?.redis_config) {
+      let RedisStorage: any;
       try {
-        const { RedisStorage } = require("./redis.storage");
-        this.storage = new RedisStorage({
-          ...(options.redis_config && options.redis_config),
-        });
+        ({ RedisStorage } = require("./redis.storage"));
       } catch (e) {
         console.warn("Redis is not available", e);
-        throw new Error("Redis is not available");
+        throw new Error(
+          "Redis is not available. Install the `redis` package to use redis_config.",
+        );
       }
+      this.storage = new RedisStorage({
+        ...options.redis_config,
+        session_ttl: this.sessionTtl,
+      });
     } else {
-      this.storage = new MapStorage();
+      this.storage = new MapStorage({ session_ttl: this.sessionTtl });
     }
   }
 
@@ -29,7 +42,9 @@ class SessionManager {
   }
 
   async set(sessionId: string, data: any): Promise<void> {
-    return this.storage.set(sessionId, data);
+    return this.sessionTtl
+      ? this.storage.set(sessionId, data, this.sessionTtl)
+      : this.storage.set(sessionId, data);
   }
 
   async update(sessionId: string, data: any): Promise<void> {

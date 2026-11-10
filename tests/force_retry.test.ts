@@ -60,7 +60,7 @@ describe("Force Retry", () => {
     });
   });
 
-  it("Menu force retry", async () => {
+  it("Wrong PIN routes to invalid_pin", async () => {
     await expect(
       router.run({
         sessionID: "345437",
@@ -68,6 +68,18 @@ describe("Force Retry", () => {
         phoneNumber: "254724765149",
         input: "",
         path: ["1234"],
+      }),
+    ).resolves.toEqual({ message: "Wrong PIN, please try again?", end: false });
+  });
+
+  it("Correct PIN after a wrong one reaches the dashboard", async () => {
+    await expect(
+      router.run({
+        sessionID: "345438",
+        serviceCode: "*222#",
+        phoneNumber: "254724765149",
+        input: "",
+        path: ["1234", "4321"],
       }),
     ).resolves.toEqual({ message: "Dashboard", end: true });
   });

@@ -1,97 +1,72 @@
-import { RedisOptions, SessionStorage } from "@/types";
-import { createClient, RedisClientType } from "redis";
+import { RedisOptions, SessionStorage } from "../types";
+import { createClient } from "redis";
+import { buildRedisUrl } from "./redis-url";
 
 export class RedisStorage implements SessionStorage {
-  private client: RedisClientType;
+  private client: any;
+  private connecting?: Promise<void>;
+  private readonly defaultTtl?: number;
 
-  constructor(options: RedisOptions) {
-    //[[username][:password]@][host][:port][/db-number]
-    const { host, username, password, port } = options;
-    const url = this.createConnectionUrl({ host, port, username, password });
+  constructor(options: RedisOptions & { session_ttl?: number }) {
+    this.defaultTtl = options.session_ttl;
 
-    this.client = createClient({ url });
+    if (options.client) {
+      this.client = options.client;
+    } else {
+      this.client = createClient({ url: buildRedisUrl(options) });
+      // Without an error listener node-redis errors crash the process.
+      this.client.on("error", (err: unknown) => {
+        console.error("Redis client error:", err);
+      });
+    }
   }
 
-  createConnectionUrl({
-    useSsl,
-    username,
-    password,
-    host,
-    port,
-    dbNumber = 0,
-  }: {
-    useSsl?: boolean;
-    username?: string;
-    password?: string;
-    host: string;
-    port: string | number;
-    dbNumber?: number;
-  }) {
-    const scheme = useSsl ? "rediss" : "redis";
+  /**
+   * Connects once and shares the connection. Concurrent callers await the
+   * same promise instead of each calling connect() ("Socket already opened").
+   */
+  private ready(): Promise<void> {
+    if (this.client.isOpen) return Promise.resolve();
 
-    let authPart = "";
-    if (username && password) {
-      authPart = `${username}:${password}@`;
-    } else if (password) {
-      authPart = `:${password}@`;
+    if (!this.connecting) {
+      this.connecting = Promise.resolve(this.client.connect()).then(
+        () => undefined,
+        (err: unknown) => {
+          // Allow a later call to retry.
+          this.connecting = undefined;
+          throw err;
+        },
+      );
     }
-
-    return `${scheme}://${authPart}${host}:${port}/${dbNumber}`;
+    return this.connecting;
   }
 
   async get(key: string): Promise<any | null> {
-    try {
-      // Connect to Redis if not already connected
-      if (!this.client.isOpen) {
-        await this.client.connect();
-      }
-
-      const value = await this.client.get(key);
-      // Parse the JSON string if it exists
-      return value ? JSON.parse(value) : null;
-    } catch (error) {
-      throw error;
-    }
+    await this.ready();
+    const value = await this.client.get(key);
+    return value ? JSON.parse(value) : null;
   }
 
-  async set(key: string, value: string): Promise<void> {
-    try {
-      // Connect to Redis if not already connected
-      if (!this.client.isOpen) {
-        await this.client.connect();
-      }
-
-      // Convert value to JSON string before storing
-      const stringValue = JSON.stringify(value);
+  async set(key: string, value: any, ttl?: number): Promise<void> {
+    await this.ready();
+    const seconds = ttl ?? this.defaultTtl;
+    const stringValue = JSON.stringify(value);
+    if (seconds && seconds > 0) {
+      await this.client.set(key, stringValue, { EX: Math.ceil(seconds) });
+    } else {
       await this.client.set(key, stringValue);
-    } catch (error) {
-      console.error("Redis set error:", error);
-      throw error;
     }
   }
 
   async delete(key: string): Promise<void> {
-    try {
-      // Connect to Redis if not already connected
-      if (!this.client.isOpen) {
-        await this.client.connect();
-      }
-
-      await this.client.del(key);
-    } catch (error) {
-      console.error("Redis delete error:", error);
-      throw error;
-    }
+    await this.ready();
+    await this.client.del(key);
   }
 
   async disconnect(): Promise<void> {
-    try {
-      if (this.client.isOpen) {
-        await this.client.quit();
-      }
-    } catch (error) {
-      console.error("Redis disconnect error:", error);
-      throw error;
+    if (this.client.isOpen) {
+      await this.client.quit();
     }
+    this.connecting = undefined;
   }
 }
